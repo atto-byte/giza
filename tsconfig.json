@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "jsx": "react-native",
+    "lib": [
+      "es2017"
+    ],
+    "module": "es2015",
+    "moduleResolution": "node",
+    "noEmitHelpers": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    // Using the type definitions in @types/expo becuase they are still better than the ones provided by expo. See SvgScreen.tsx and SystemFontsScreen.tsx.
+    "paths": {
+      "*": ["types/*"],
+      "expo": [
+        "../node_modules/@types/expo",
+        "../node_modules/expo"
+      ],
+    },
+    "skipLibCheck": true,
+    "sourceMap": false, // Something else (Babel?) is creating the necessary source maps.
+    "strict": true,
+    "target": "es2017"
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

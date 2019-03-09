@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@expo/samples": "2.1.1",
+    "@types/react-navigation": "^3.0.5",
     "expo": "^32.0.0",
     "react": "16.5.0",
     "react-native": "https://github.com/expo/react-native/archive/sdk-32.0.0.tar.gz",
@@ -19,8 +20,22 @@
     "react-navigation": "^3.0.9"
   },
   "devDependencies": {
+    "@types/eslint-plugin-prettier": "^2.2.0",
+    "@types/expo": "^32.0.6",
+    "@types/expo__vector-icons": "9.0.1",
+    "@types/prettier": "^1.16.1",
+    "@types/react": "16.8.7",
+    "@types/react-native": "0.57.38",
+    "@typescript-eslint/eslint-plugin": "^1.4.2",
+    "@typescript-eslint/parser": "^1.4.2",
     "babel-preset-expo": "^5.0.0",
-    "jest-expo": "^32.0.0"
+    "eslint": "^5.15.1",
+    "eslint-config-prettier": "^4.1.0",
+    "eslint-plugin-prettier": "^3.0.1",
+    "jest-expo": "^32.0.0",
+    "prettier": "^1.16.4",
+    "react-native-typescript-transformer": "1.2.12",
+    "typescript": "3.3.3333"
   },
   "private": true
 }
