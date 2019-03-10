@@ -1,12 +1,36 @@
+import { Constants, Location, Permissions } from 'expo';
 import React from 'react';
 import { Platform } from 'react-native';
-import { Constants, Location, Permissions } from 'expo';
-import MapView, { Circle } from 'react-native-maps';
+import MapView, { Circle, Polygon, Region } from 'react-native-maps';
 
+interface Rectangle {
+  weight: number
+}
 interface IState {
+  region: Region | undefined;
   location: Location.LocationData;
   errorMessage: string | null;
+  rectangles: Array<Array<Rectangle | null>>
+  itemDeltaLat: number
+  itemDeltaLong: number
 }
+const locations = [
+
+]
+const noRows = 25;
+const noColumns = 15;
+const defaultLatDelta = 0.0922;
+const defaultLongDelta = 0.0421;
+const getItemNo = (position: number,viewPosition: number, delta: number) => {
+  let itemNo = -1;
+  const diff = position - viewPosition
+  // Is in frame
+  if(diff && diff < delta && diff > 0){
+    itemNo = Math.floor(diff/delta)
+  }
+  return itemNo
+}
+
 const mapStyles = [
   {
     elementType: 'geometry',
@@ -275,11 +299,22 @@ const mapStyles = [
   }
 ]
 export default class Map extends React.Component<{},IState> {
-  state = {
-    region: { latitude: 37.78825, longitude: -122.4324, latitudeDelta: 0.0922, longitudeDelta: 0.0421 },
+  state: IState = {
+    region: undefined,
     location: {coords: { latitude: 37.78825, longitude: -122.4324, accuracy: 1000}},
-    errorMessage: null
+    errorMessage: null,
+    rectangles: [...Array(noRows)].map(e => Array(noColumns).fill({}))
   }
+  handleRegionChange = (region: Region) => {
+    const itemDeltaLat = region.latitudeDelta / noRows
+    const itemDeltaLong = region.longitudeDelta / noColumns
+    this.setState({
+      region,
+      itemDeltaLat,
+      itemDeltaLong
+    })
+  };
+
   componentWillMount() {
     if (Platform.OS === 'android' && !Constants.isDevice) {
       this.setState({
@@ -289,7 +324,7 @@ export default class Map extends React.Component<{},IState> {
       this._getLocationAsync();
     }
   }
-
+  
   _getLocationAsync = async () => {
     let { status } = await Permissions.askAsync(Permissions.LOCATION);
     if (status !== 'granted') {
@@ -299,11 +334,83 @@ export default class Map extends React.Component<{},IState> {
     }
 
     let location = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Low});
-    this.setState({ location });
+    this.setState({ 
+      location,
+      region: {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: defaultLatDelta,
+        longitudeDelta: defaultLongDelta
+      }
+    });
   };
+  
+  _addWeightToRectangle = (coords: Location.Coords) => {
+    // Get Row No
+    const {region } = this.state;
+    console.log("Region", region);
+    console.log("Location", coords);
+    if(region && region.latitude){
+      const viewLat = region.latitude;
+      const viewLatDelta = region.latitudeDelta || defaultLatDelta
+      const viewLong = region.longitude;
+      const viewLongDelta = region.longitudeDelta || defaultLongDelta
+      if(viewLat && viewLatDelta && viewLong && viewLongDelta){
+        let rowNo = getItemNo(coords.longitude, viewLat, viewLongDelta)
+        let columnNo = getItemNo(coords.latitude, viewLong,viewLatDelta)
+        this.setState(({rectangles}) => {
+          rectangles[0][0] = {
+            weight: Boolean(rectangles[0][0] && rectangles[0][0].weight) ? rectangles[0][0].weight + 1 : 1
+          }
+          return({rectangles})
+        })
+      }
+    }
+  }
+  genRectCoords = (rowNo: number, columnNo: number) => {
+    const coords = new Array(4);
+    const {region, itemDeltaLong, itemDeltaLat} = this.state;
+    const longitude = region.longitude + itemDeltaLong * columnNo;
+    const latitude = region.latitude + itemDeltaLat * rowNo
+    coords[0] = {
+      longitude,
+      latitude
+    }
+    coords[1] = {
+      longitude: longitude + itemDeltaLong,
+      latitude
+    }
+    coords[2] = {
+      longitude: longitude + itemDeltaLong,
+      latitude: latitude + itemDeltaLat
+    }
+    coords[3] = {
+      longitude,
+      latitude: latitude + itemDeltaLat
+    }
+    console.log(coords);
+    return coords
+  }
+  renderRectangles = () => {
+    const renderResult: any = this.state.rectangles.reduce((result: any, row, rowNo) => {
+      row.map((cell, columnNo) => {
+        if(cell && cell.weight){
+          result.push(
+            <Polygon 
+              coordinates={this.genRectCoords(rowNo, columnNo)} 
+              fillColor={getColor(cell.weight)}
+            />
+          )
+        }
+      })
+      return result || []
+      
+    }, [])
+    return renderResult
+  }
   render() {
-    const {location} = this.state;
-    const region = (location && location.coords) ? {
+    const {location, region, rectangles} = this.state;
+    const initialRegion = (location && location.coords) ? {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       latitudeDelta: 0.0922,
@@ -315,27 +422,18 @@ export default class Map extends React.Component<{},IState> {
         showsUserLocation
         showsMyLocationButton
         customMapStyle={mapStyles}
-        initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        region={region}
-        
+        initialRegion={initialRegion}
+        region={this.state.region}
+        onRegionChange={this.handleRegionChange}
+        onPress={()=> this._addWeightToRectangle(this.state.location.coords)}
       >
-        {
-        location
-        ? <Circle 
-            center={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            }}
-            radius={1000}
-          />
-        : 'Nope'
-        }
+        {this.renderRectangles()}
       </MapView>
     );
   }
+}
+function getColor(value){
+  //value from 0 to 1
+  var hue=((1-value)*120).toString(10);
+  return ["hsl(",hue,",100%,50%)"].join("");
 }
